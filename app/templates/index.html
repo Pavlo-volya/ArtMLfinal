@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Portrait Animator</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --card: #1a1d24;
+      --card-2: #22262f;
+      --text: #e8eaed;
+      --muted: #9aa0a6;
+      --accent: #7c5cff;
+      --accent-2: #5af1c8;
+      --border: #2c3039;
+      --danger: #ff6b6b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: radial-gradient(1200px 800px at 20% 0%, #1a1638 0%, var(--bg) 60%);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+    .card {
+      width: 100%;
+      max-width: 640px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    h1 {
+      font-size: 22px;
+      margin: 0 0 4px 0;
+      letter-spacing: 0.2px;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 22px;
+    }
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: 14px;
+      padding: 28px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      background: var(--card-2);
+    }
+    .dropzone.hover {
+      border-color: var(--accent);
+      background: #22204a;
+    }
+    .dropzone p { margin: 6px 0; }
+    .dropzone .small { color: var(--muted); font-size: 13px; }
+    .dropzone img.preview {
+      max-height: 180px;
+      max-width: 100%;
+      border-radius: 10px;
+      margin-top: 10px;
+      object-fit: cover;
+    }
+    .row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-top: 18px;
+    }
+    label {
+      font-size: 13px;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 6px;
+    }
+    select, button {
+      font: inherit;
+      border-radius: 10px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      background: var(--card-2);
+      color: var(--text);
+    }
+    select { width: 100%; }
+    button.primary {
+      width: 100%;
+      border: none;
+      background: linear-gradient(135deg, var(--accent), #5a3cff);
+      color: #fff;
+      font-weight: 600;
+      padding: 14px;
+      cursor: pointer;
+      transition: transform 0.05s ease, filter 0.15s ease;
+    }
+    button.primary:hover { filter: brightness(1.08); }
+    button.primary:active { transform: translateY(1px); }
+    button.primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      filter: grayscale(0.3);
+    }
+    .status {
+      margin-top: 16px;
+      font-size: 14px;
+      color: var(--muted);
+      min-height: 20px;
+    }
+    .status.error { color: var(--danger); }
+    .result {
+      display: none;
+      margin-top: 24px;
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
+    }
+    .result.show { display: block; }
+    .result { text-align: center; }
+    img.gif {
+      display: block;
+      margin: 0 auto;
+      max-width: 280px;
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #000;
+    }
+    .dl-btn {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--accent-2);
+      color: var(--accent-2);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .dl-btn:hover { background: rgba(90, 241, 200, 0.1); }
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.25);
+      border-top-color: var(--accent-2);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: -2px;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Portrait Animator</h1>
+    <div class="sub">Upload a portrait, pick an expression, get a looping wallpaper GIF.</div>
+
+    <form id="form">
+      <div id="drop" class="dropzone" tabindex="0">
+        <p><strong>Drop a portrait here</strong> or click to choose</p>
+        <p class="small">JPG, PNG, WebP &middot; clear front-facing photo works best</p>
+        <input id="file" type="file" name="image" accept="image/*" hidden />
+        <img id="preview" class="preview" alt="" style="display:none" />
+      </div>
+
+      <div class="row" style="flex-direction: column; align-items: stretch; gap: 6px;">
+        <label for="preset">Expression</label>
+        <select id="preset" name="preset">
+          {% for opt in options %}
+          <option value="{{ opt.key }}">{{ opt.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="row">
+        <button id="go" class="primary" type="submit">Generate</button>
+      </div>
+      <div id="status" class="status"></div>
+    </form>
+
+    <div id="result" class="result">
+      <img id="outGif" class="gif" alt="Animated portrait" />
+      <a id="dlBtn" class="dl-btn" href="#" download>Download GIF</a>
+    </div>
+  </div>
+
+<script>
+  const drop = document.getElementById('drop');
+  const fileInput = document.getElementById('file');
+  const preview = document.getElementById('preview');
+  const form = document.getElementById('form');
+  const goBtn = document.getElementById('go');
+  const status = document.getElementById('status');
+  const result = document.getElementById('result');
+  const outGif = document.getElementById('outGif');
+  const dlBtn = document.getElementById('dlBtn');
+
+  drop.addEventListener('click', () => fileInput.click());
+  drop.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+  });
+  ['dragenter','dragover'].forEach(ev =>
+    drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('hover'); })
+  );
+  ['dragleave','drop'].forEach(ev =>
+    drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('hover'); })
+  );
+  drop.addEventListener('drop', (e) => {
+    const files = e.dataTransfer.files;
+    if (files && files.length) {
+      fileInput.files = files;
+      showPreview(files[0]);
+    }
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) showPreview(fileInput.files[0]);
+  });
+
+  function showPreview(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!fileInput.files[0]) {
+      setStatus('Please choose a portrait image first.', true);
+      return;
+    }
+    const fd = new FormData();
+    fd.append('image', fileInput.files[0]);
+    fd.append('preset', document.getElementById('preset').value);
+
+    goBtn.disabled = true;
+    result.classList.remove('show');
+    setStatus('<span class="spinner"></span>Generating animation (this may take 30–90 seconds)…');
+
+    try {
+      const res = await fetch('/generate', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) {
+        setStatus(data.error || 'Generation failed.', true);
+        return;
+      }
+      outGif.src = data.gif_url + '?t=' + Date.now();
+      dlBtn.href = data.download_url;
+      result.classList.add('show');
+      const size = data.info && data.info.bytes
+        ? ' (' + (data.info.bytes / (1024*1024)).toFixed(1) + ' MB)'
+        : '';
+      setStatus('Done' + size + '.');
+    } catch (err) {
+      setStatus('Network error: ' + err.message, true);
+    } finally {
+      goBtn.disabled = false;
+    }
+  });
+
+  function setStatus(msg, isError) {
+    status.className = 'status' + (isError ? ' error' : '');
+    status.innerHTML = msg;
+  }
+</script>
+</body>
+</html>

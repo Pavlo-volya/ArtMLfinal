@@ -1,21 +1,18 @@
-# Portrait Animator
+# Still With Us
 
-A local Flask web app that animates a portrait photo using
-[LivePortrait](https://github.com/KwaiVGI/LivePortrait)'s retargeting module
-and exports a looping, phone-wallpaper-sized GIF. A QR code links directly to
-the download URL so you can scan it onto your phone.
+A local Flask web app that turns a portrait photo into a gently looping phone-wallpaper GIF. Built around remembering grandparents — warm light-blue UI, cozy loading messages, the result framed inside iPhone and Galaxy mockups so you can see how it'll look on a phone.
+
+The animation runs on **Replicate** (`fofr/live-portrait`, an Nvidia L40S in their cloud). You don't need a local GPU and you don't need PyTorch installed — your machine just runs Flask and encodes the GIF.
 
 ## Features
 
 - Drag-and-drop portrait upload
-- 5 expression presets: Smile, Blink, Smile + Blink, Gentle Head Tilt, Head Tilt + Smile
-- Per-preset parameter trajectories drive LivePortrait's retargeting scalars
-  (rotate_pitch/yaw/roll, eye_close, lip_open, smile)
-- Output: looping GIF at 1080×1920 (phone portrait), 24 fps, per-frame 256-color
-  optimized palette with Floyd-Steinberg dithering
-- Auto-downscales if the GIF would exceed 15 MB
-- QR code linking to `http://localhost:5001/download/<file_id>`
-- CUDA GPU if available; CPU fallback otherwise
+- 3 expression presets — **Smile**, **Blink** (single-eye wink), **Smile + Blink**
+- Each preset is driven by a short pre-recorded driving video (`app/driving_videos/*.mp4`)
+- Looping GIF output at 540×960, 18 fps, 256-color per-frame palette with Floyd–Steinberg dithering
+- Result preview rendered inside an iPhone and a Galaxy phone frame
+- Driving videos are uploaded to Replicate **once** at startup and the URLs cached on disk, so each `/generate` only ships the source image
+- Auto-retry on expired Replicate Files URLs (cache self-heals)
 
 ## Project layout
 
@@ -23,42 +20,37 @@ the download URL so you can scan it onto your phone.
 ArtMLfinal/
 ├── README.md
 └── app/
-    ├── app.py                 # Flask backend
-    ├── expressions.py         # Preset parameter trajectories
-    ├── liveportrait_runner.py # LivePortrait wrapper
-    ├── gif_writer.py          # High-quality looping GIF encoder
+    ├── app.py                  # Flask backend
+    ├── replicate_runner.py     # Replicate API wrapper (the runner used in this mode)
+    ├── gif_writer.py           # GIF encoder
+    ├── expressions.py          # Preset names/labels (the scalar trajectories
+    │                           # are unused in Replicate mode but kept for the
+    │                           # local fallback)
     ├── requirements.txt
-    ├── setup.sh
-    ├── liveportrait/          # (cloned by setup.sh)
+    ├── .env.example            # Copy to .env and fill in your token
+    ├── driving_videos/         # smile.mp4, blink.mp4, smile_blink.mp4
     ├── static/
-    │   ├── uploads/           # Uploaded source images
-    │   └── outputs/           # Generated GIFs
+    │   ├── uploads/            # Uploaded source images
+    │   └── outputs/            # Generated GIFs
     └── templates/
         └── index.html
 ```
 
 ## Setup
 
-Requires Python **3.10 or 3.11** (LivePortrait's pinned deps don't have
-prebuilt wheels for 3.12+ on all platforms, which forces source builds
-for scipy/numpy) and `git`. A CUDA GPU is strongly recommended; CPU
-inference will still work but is slow (minutes per clip).
-
-On macOS arm64 / Apple Silicon, install Python 3.11 via `brew install python@3.11`
-first if you don't have it.
+Requires Python **3.10 or 3.11**, `ffmpeg` on PATH (`brew install ffmpeg` on macOS), and a free [Replicate](https://replicate.com) account with a few dollars of prepaid credit (~$0.04/run).
 
 ```bash
 cd app
-bash setup.sh
+python3.11 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+# edit .env: paste your token (https://replicate.com/account/api-tokens)
+#            and keep USE_REPLICATE=1
 ```
 
-`setup.sh` will:
-
-1. Clone LivePortrait into `app/liveportrait/`
-2. Create a Python venv at `app/venv/`
-3. Install `requirements.txt` plus LivePortrait's own requirements
-4. Download pretrained weights from HuggingFace
-   (`KwaiVGI/LivePortrait`) into `app/liveportrait/pretrained_weights/`
+That's it — no LivePortrait clone, no model weights, no GPU.
 
 ## Run
 
@@ -68,41 +60,58 @@ source venv/bin/activate
 python app.py
 ```
 
-Open <http://localhost:5001> in your browser.
+On first start, the app uploads the 3 driving videos to Replicate's Files API (~10–15 s) and caches the URLs in `app/.driving_video_urls.json`. Subsequent starts skip this. Open <http://localhost:5001>.
 
 ## Using the app
 
-1. Drop a clear, front-facing portrait photo onto the upload area
-2. Pick an expression from the dropdown
-3. Click **Generate** (first run warms up the models; subsequent runs are faster)
-4. Preview the animation, scan the QR code with your phone, tap to download
+1. Drop a clear front-facing portrait into the upload area
+2. Pick an expression
+3. Click **Generate** — a cozy loader plays through messages like *"Pulling out the old photo album…"* while Replicate works
+4. The result appears framed inside an iPhone and a Galaxy mockup; click **Download GIF** to save
 
-## Notes on the LivePortrait integration
+## How a request flows
 
-- We use LivePortrait's **retargeting** path (not driving-video): parameter
-  scalars are pushed directly into the keypoint / expression basis per frame.
-- The source portrait's features are extracted **once** per request and reused
-  for every frame, so animation cost scales linearly with frame count.
-- The `flag_stitching` and `flag_pasteback` flags are enabled so the animated
-  face is blended cleanly back onto the original photo background.
+```
+browser ─upload─▶ Flask /generate
+                    │
+                    ├─ POST source image + cached driving-video URL
+                    │   to fofr/live-portrait on Replicate (L40S)
+                    │
+                    │   (Replicate returns mp4 URL or FileOutput)
+                    ▼
+                 imageio + ffmpeg decode mp4 → PIL frames
+                    │
+                    ▼
+                 gif_writer: fit-cover to 540×960,
+                 quantize per-frame (256-color + Floyd–Steinberg),
+                 write looping GIF
+                    │
+                    ▼
+                 JSON {gif_url, download_url}
+```
 
-## Tweaking presets
+## Tools used in this mode
 
-Edit `app/expressions.py`. Each preset returns a list of dicts, one per frame,
-with `rotate_pitch`, `rotate_yaw`, `rotate_roll`, `eye_close`, `lip_open`,
-`smile` scalars. Frames loop by construction (first ≈ last).
+**Backend:** Flask · Jinja2 · Werkzeug · Pillow · imageio · imageio-ffmpeg · ffmpeg (system) · replicate · requests · python-dotenv
+
+**External service:** Replicate — runs `fofr/live-portrait` on an Nvidia L40S (the model itself is PyTorch + LivePortrait + InsightFace, but those run on Replicate's machines, not yours)
+
+**Frontend:** vanilla HTML / CSS / JavaScript (no framework)
+
+## Performance & cost
+
+- **Cost:** ~$0.02–0.04 per generation (metered by Replicate, deducted from prepaid credit)
+- **Warm:** ~25–40 s end-to-end (queue+inference ~15–30 s, source upload + decode + GIF encode ~10–15 s)
+- **Cold:** add ~60–90 s if no requests have hit the model in the last few minutes — Replicate spins workers down when idle. Click Generate once before a demo to warm it up.
 
 ## Troubleshooting
 
-- **"Face not detected"**: try a sharper, front-facing photo; avoid heavy
-  occlusion (sunglasses, hands on face).
-- **OOM on GPU**: lower frame count in `expressions.py`, or set
-  `flag_use_half_precision=True` (already default on CUDA).
-- **CPU run is slow**: expect 1–3 min per clip on modern CPUs; reduce
-  `n_frames` in presets for a faster test.
-- **GIF too large / low quality**: `gif_writer.py` auto-steps down resolution
-  until the file fits under 15 MB. Adjust `MAX_SIZE_BYTES` there if needed.
-- **`pip` tries to build `scipy` from source (meson error)**: you're on
-  Python 3.12+ or a platform without a matching wheel. Re-run `setup.sh`
-  after installing Python 3.11 (`brew install python@3.11`); setup.sh
-  auto-picks it. If you already have a broken venv, `rm -rf app/venv` first.
+- **`No ffmpeg exe could be found`** — install ffmpeg (`brew install ffmpeg`) or `pip install --force-reinstall imageio-ffmpeg`.
+- **`REPLICATE_API_TOKEN is not set`** — copy `.env.example` to `.env` and paste your token.
+- **`404 Client Error` on a `/v1/files/...` URL** — the cached driving-video URL expired (~24 h TTL). The runner already auto-invalidates and retries; if it still fails, delete `app/.driving_video_urls.json` and restart Flask to re-upload.
+- **GIF generation slow (>1 min)** — Replicate cold-start, not your code. Check the per-call timing logged in the terminal (`[replicate] preset=… inference+queue=… [gif_writer] took …s`).
+- **Nothing happens / output looks frozen** — make sure your driving videos in `app/driving_videos/` show *visible*, slightly exaggerated motion. The model copies the magnitude of motion from the driving video; subtle = subtle.
+
+## Switching to local execution
+
+The repo also contains a local PyTorch path (`liveportrait_runner.py`) that runs LivePortrait directly on your machine. To use it, set `USE_REPLICATE=0` in `.env` and run `bash setup.sh` to clone LivePortrait and download weights. Not covered in this README.

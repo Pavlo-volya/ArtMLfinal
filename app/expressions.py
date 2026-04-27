@@ -90,48 +90,16 @@ def preset_smile_blink(n_frames: int = FRAMES) -> list[dict]:
     return base
 
 
-def preset_head_tilt(n_frames: int = FRAMES) -> list[dict]:
-    # Gentle side-to-side tilt: one full sine cycle across the loop.
-    out = []
-    for i in range(n_frames):
-        phase = 2 * math.pi * i / n_frames
-        yaw = 6.0 * math.sin(phase)
-        roll = 2.0 * math.sin(phase)
-        pitch = -1.5 * math.cos(phase)
-        out.append({
-            "rotate_pitch": pitch,
-            "rotate_yaw": yaw,
-            "rotate_roll": roll,
-            "eye_close": 0.0,
-            "lip_open": 0.0,
-            "smile": 0.0,
-        })
-    return out
-
-
-def preset_head_tilt_smile(n_frames: int = FRAMES) -> list[dict]:
-    tilt = preset_head_tilt(n_frames)
-    smile = preset_smile(n_frames)
-    for i in range(n_frames):
-        tilt[i]["smile"] = smile[i]["smile"]
-        tilt[i]["lip_open"] = smile[i]["lip_open"]
-    return tilt
-
-
 PRESETS: dict[str, Callable[[], list[dict]]] = {
     "smile": preset_smile,
     "blink": preset_blink,
     "smile_blink": preset_smile_blink,
-    "head_tilt": preset_head_tilt,
-    "head_tilt_smile": preset_head_tilt_smile,
 }
 
 PRESET_LABELS = {
     "smile": "Smile",
     "blink": "Blink",
     "smile_blink": "Smile + Blink",
-    "head_tilt": "Gentle Head Tilt",
-    "head_tilt_smile": "Head Tilt + Smile",
 }
 
 

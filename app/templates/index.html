@@ -3,192 +3,497 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Portrait Animator</title>
+  <title>Still With Us</title>
   <style>
     :root {
-      --bg: #0f1115;
-      --card: #1a1d24;
-      --card-2: #22262f;
-      --text: #e8eaed;
-      --muted: #9aa0a6;
-      --accent: #7c5cff;
-      --accent-2: #5af1c8;
-      --border: #2c3039;
-      --danger: #ff6b6b;
+      --bg-1: #f4f9fd;
+      --bg-2: #e4f1fb;
+      --bg-3: #d4e9f7;
+      --card: #ffffff;
+      --card-tint: #f8fbfe;
+      --text: #1e3a5f;
+      --muted: #6b8aa8;
+      --accent: #7bb8e0;
+      --accent-dark: #5a9cc8;
+      --accent-soft: #c7e2f3;
+      --border: #dce9f5;
+      --success: #5aa897;
+      --danger: #d97878;
+      --shadow: 0 10px 40px rgba(90, 156, 200, 0.12);
+      --shadow-hover: 0 16px 50px rgba(90, 156, 200, 0.2);
     }
+
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: radial-gradient(1200px 800px at 20% 0%, #1a1638 0%, var(--bg) 60%);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto, sans-serif;
+      background:
+        radial-gradient(900px 600px at 15% 0%, var(--bg-2) 0%, transparent 60%),
+        radial-gradient(800px 700px at 90% 100%, var(--bg-3) 0%, transparent 55%),
+        var(--bg-1);
       color: var(--text);
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 32px 16px;
+      padding: 48px 16px;
+      line-height: 1.5;
     }
+
+    body::before, body::after {
+      content: "";
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(60px);
+      opacity: 0.5;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::before {
+      width: 300px; height: 300px;
+      background: var(--accent-soft);
+      top: -80px; right: -80px;
+      animation: drift 20s ease-in-out infinite;
+    }
+    body::after {
+      width: 400px; height: 400px;
+      background: #ffe4c4;
+      opacity: 0.3;
+      bottom: -120px; left: -120px;
+      animation: drift 25s ease-in-out infinite reverse;
+    }
+    @keyframes drift {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(30px, -20px); }
+    }
+
     .card {
+      position: relative;
+      z-index: 1;
       width: 100%;
-      max-width: 640px;
+      max-width: 920px;
       background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 28px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+      border-radius: 28px;
+      padding: 36px 32px;
+      box-shadow: var(--shadow);
+      transition: box-shadow 0.3s ease;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      align-items: start;
     }
+    .card:hover { box-shadow: var(--shadow-hover); }
+    .col-form { min-width: 0; }
+    .col-result {
+      min-width: 0;
+      position: sticky;
+      top: 32px;
+    }
+    @media (max-width: 780px) {
+      .card {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        max-width: 520px;
+      }
+      .col-result { position: static; }
+    }
+
+    .title-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+    .title-row .sun {
+      width: 28px; height: 28px;
+      background: radial-gradient(circle, #ffd27a 0%, #ffb94d 100%);
+      border-radius: 50%;
+      box-shadow: 0 0 20px rgba(255, 185, 77, 0.5);
+      flex-shrink: 0;
+    }
+
     h1 {
-      font-size: 22px;
-      margin: 0 0 4px 0;
-      letter-spacing: 0.2px;
+      font-size: 26px;
+      margin: 0;
+      letter-spacing: -0.3px;
+      font-weight: 700;
     }
+
     .sub {
       color: var(--muted);
-      font-size: 14px;
-      margin-bottom: 22px;
+      font-size: 15px;
+      margin-bottom: 28px;
+      margin-top: 2px;
     }
+
     .dropzone {
+      position: relative;
       border: 2px dashed var(--border);
-      border-radius: 14px;
-      padding: 28px;
+      border-radius: 20px;
+      padding: 34px 20px;
       text-align: center;
       cursor: pointer;
-      transition: all 0.15s ease;
-      background: var(--card-2);
+      transition: all 0.2s ease;
+      background: var(--card-tint);
+    }
+    .dropzone:hover {
+      border-color: var(--accent);
+      background: #f2f8fd;
     }
     .dropzone.hover {
       border-color: var(--accent);
-      background: #22204a;
+      background: #e8f3fb;
+      transform: scale(1.01);
     }
-    .dropzone p { margin: 6px 0; }
+    .dropzone p { margin: 4px 0; }
     .dropzone .small { color: var(--muted); font-size: 13px; }
+    .dropzone .icon {
+      width: 48px; height: 48px;
+      margin: 0 auto 10px;
+      background: var(--accent-soft);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-dark);
+      font-size: 24px;
+    }
     .dropzone img.preview {
       max-height: 180px;
       max-width: 100%;
-      border-radius: 10px;
-      margin-top: 10px;
+      border-radius: 14px;
+      margin-top: 12px;
       object-fit: cover;
+      box-shadow: 0 4px 20px rgba(90, 156, 200, 0.18);
     }
-    .row {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      margin-top: 18px;
-    }
+
     label {
       font-size: 13px;
       color: var(--muted);
       display: block;
-      margin-bottom: 6px;
+      margin: 22px 0 8px;
+      font-weight: 500;
+      letter-spacing: 0.2px;
     }
-    select, button {
+
+    select {
       font: inherit;
-      border-radius: 10px;
-      padding: 12px 14px;
-      border: 1px solid var(--border);
-      background: var(--card-2);
+      width: 100%;
+      border-radius: 14px;
+      padding: 14px 16px;
+      border: 1.5px solid var(--border);
+      background: var(--card-tint);
       color: var(--text);
+      cursor: pointer;
+      transition: border-color 0.15s ease, background 0.15s ease;
+      appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14' fill='none' stroke='%236b8aa8' stroke-width='2'><path d='M3 5l4 4 4-4'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 16px center;
     }
-    select { width: 100%; }
+    select:hover { border-color: var(--accent); }
+    select:focus { outline: none; border-color: var(--accent-dark); background: white; }
+
     button.primary {
       width: 100%;
       border: none;
-      background: linear-gradient(135deg, var(--accent), #5a3cff);
+      margin-top: 22px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
       color: #fff;
+      font: inherit;
       font-weight: 600;
-      padding: 14px;
+      font-size: 15px;
+      padding: 15px;
       cursor: pointer;
-      transition: transform 0.05s ease, filter 0.15s ease;
+      transition: transform 0.08s ease, box-shadow 0.2s ease, filter 0.15s ease;
+      box-shadow: 0 4px 16px rgba(122, 184, 224, 0.35);
     }
-    button.primary:hover { filter: brightness(1.08); }
+    button.primary:hover {
+      filter: brightness(1.05);
+      box-shadow: 0 6px 20px rgba(122, 184, 224, 0.5);
+    }
     button.primary:active { transform: translateY(1px); }
     button.primary:disabled {
-      opacity: 0.6;
+      opacity: 0.5;
       cursor: not-allowed;
       filter: grayscale(0.3);
     }
+
     .status {
       margin-top: 16px;
       font-size: 14px;
       color: var(--muted);
-      min-height: 20px;
+      min-height: 22px;
+      text-align: center;
     }
     .status.error { color: var(--danger); }
-    .result {
+    .status.success { color: var(--success); }
+
+    .cozy-loader {
       display: none;
       margin-top: 24px;
-      border-top: 1px solid var(--border);
-      padding-top: 20px;
+      padding: 28px 20px;
+      background: linear-gradient(135deg, var(--card-tint) 0%, #f0f7fc 100%);
+      border-radius: 20px;
+      text-align: center;
     }
-    .result.show { display: block; }
-    .result { text-align: center; }
-    img.gif {
-      display: block;
-      margin: 0 auto;
-      max-width: 280px;
+    .cozy-loader.show { display: block; }
+
+    .wisps {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      height: 40px;
+      align-items: flex-end;
+    }
+    .wisp {
+      width: 8px;
+      background: linear-gradient(to top, var(--accent), var(--accent-soft));
+      border-radius: 10px;
+      animation: breathe 1.6s ease-in-out infinite;
+    }
+    .wisp:nth-child(1) { height: 18px; animation-delay: 0s; }
+    .wisp:nth-child(2) { height: 26px; animation-delay: 0.15s; }
+    .wisp:nth-child(3) { height: 34px; animation-delay: 0.3s; }
+    .wisp:nth-child(4) { height: 26px; animation-delay: 0.45s; }
+    .wisp:nth-child(5) { height: 18px; animation-delay: 0.6s; }
+
+    @keyframes breathe {
+      0%, 100% { transform: scaleY(0.6); opacity: 0.5; }
+      50% { transform: scaleY(1); opacity: 1; }
+    }
+
+    .cozy-msg {
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 500;
+      transition: opacity 0.4s ease;
+    }
+    .cozy-sub {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .result-panel {
+      background: linear-gradient(135deg, var(--card-tint) 0%, #f0f7fc 100%);
+      border-radius: 20px;
+      padding: 24px 20px;
+      min-height: 460px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .result-empty {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .result-empty .empty-icon {
+      width: 60px; height: 60px;
+      margin: 0 auto 14px;
+      border-radius: 18px;
+      background: var(--accent-soft);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-dark);
+      font-size: 28px;
+    }
+
+    .result.show ~ .result-empty,
+    .result.show .result-empty { display: none; }
+
+    .result { display: none; width: 100%; }
+    .result.show { display: flex; flex-direction: column; align-items: center; }
+
+    /* Phone mockups --------------------------------------- */
+    .phones {
+      display: flex;
+      gap: 18px;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    .phone-wrap { display: flex; flex-direction: column; align-items: center; }
+
+    .phone {
+      position: relative;
+      width: 160px;
+      height: 340px;
+      background: linear-gradient(160deg, #2b2b2f 0%, #0f0f12 100%);
+      padding: 7px;
+      box-shadow:
+        0 14px 32px rgba(20, 40, 70, 0.25),
+        inset 0 0 0 1.5px #3a3a40;
+    }
+    .phone .screen {
       width: 100%;
-      height: auto;
-      border-radius: 12px;
-      border: 1px solid var(--border);
+      height: 100%;
+      overflow: hidden;
       background: #000;
+      position: relative;
     }
+    .phone .screen img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* iPhone specifics: very rounded corners + dynamic island */
+    .phone.iphone { border-radius: 32px; }
+    .phone.iphone .screen { border-radius: 26px; }
+    .phone.iphone::before {
+      content: "";
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 18px;
+      background: #000;
+      border-radius: 12px;
+      z-index: 2;
+      box-shadow: 0 0 0 1px #1a1a1a;
+    }
+    /* Side buttons */
+    .phone.iphone::after {
+      content: "";
+      position: absolute;
+      left: -2px;
+      top: 74px;
+      width: 2px;
+      height: 26px;
+      background: #1f1f23;
+      border-radius: 1px;
+      box-shadow:
+        0 38px 0 #1f1f23,
+        0 78px 0 #1f1f23;
+    }
+
+    /* Samsung Galaxy: slightly less rounded, centered punch-hole */
+    .phone.samsung { border-radius: 22px; }
+    .phone.samsung .screen { border-radius: 16px; }
+    .phone.samsung::before {
+      content: "";
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 7px;
+      height: 7px;
+      background: #000;
+      border-radius: 50%;
+      z-index: 2;
+      box-shadow: 0 0 0 1px #2a2a2a;
+    }
+    /* Galaxy side buttons (right side) */
+    .phone.samsung::after {
+      content: "";
+      position: absolute;
+      right: -2px;
+      top: 90px;
+      width: 2px;
+      height: 30px;
+      background: #1f1f23;
+      border-radius: 1px;
+      box-shadow: 0 48px 0 #1f1f23;
+    }
+
+    .phone-label {
+      text-align: center;
+      font-size: 10.5px;
+      color: var(--muted);
+      margin-top: 8px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+
     .dl-btn {
       display: inline-block;
-      margin-top: 10px;
-      padding: 10px 14px;
-      border-radius: 10px;
-      border: 1px solid var(--accent-2);
-      color: var(--accent-2);
+      margin-top: 16px;
+      padding: 11px 20px;
+      border-radius: 12px;
+      background: var(--accent-soft);
+      color: var(--accent-dark);
       text-decoration: none;
       font-weight: 600;
       font-size: 14px;
+      transition: background 0.15s ease, transform 0.08s ease;
     }
-    .dl-btn:hover { background: rgba(90, 241, 200, 0.1); }
-    .spinner {
-      display: inline-block;
-      width: 14px;
-      height: 14px;
-      border: 2px solid rgba(255,255,255,0.25);
-      border-top-color: var(--accent-2);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      vertical-align: -2px;
-      margin-right: 8px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .dl-btn:hover { background: #b6d7ec; }
+    .dl-btn:active { transform: translateY(1px); }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>Portrait Animator</h1>
-    <div class="sub">Upload a portrait, pick an expression, get a looping wallpaper GIF.</div>
-
-    <form id="form">
-      <div id="drop" class="dropzone" tabindex="0">
-        <p><strong>Drop a portrait here</strong> or click to choose</p>
-        <p class="small">JPG, PNG, WebP &middot; clear front-facing photo works best</p>
-        <input id="file" type="file" name="image" accept="image/*" hidden />
-        <img id="preview" class="preview" alt="" style="display:none" />
+    <div class="col-form">
+      <div class="title-row">
+        <div class="sun"></div>
+        <h1>Still With Us</h1>
       </div>
+      <div class="sub">A looping wallpaper of someone you hold close.</div>
 
-      <div class="row" style="flex-direction: column; align-items: stretch; gap: 6px;">
+      <form id="form">
+        <div id="drop" class="dropzone" tabindex="0">
+          <div class="icon">&#x2601;</div>
+          <p><strong>Drop a portrait here</strong> or click to choose</p>
+          <p class="small">JPG, PNG, or WebP &middot; a clear front-facing photo works best</p>
+          <input id="file" type="file" name="image" accept="image/*" hidden />
+          <img id="preview" class="preview" alt="" style="display:none" />
+        </div>
+
         <label for="preset">Expression</label>
         <select id="preset" name="preset">
           {% for opt in options %}
           <option value="{{ opt.key }}">{{ opt.label }}</option>
           {% endfor %}
         </select>
-      </div>
 
-      <div class="row">
         <button id="go" class="primary" type="submit">Generate</button>
-      </div>
-      <div id="status" class="status"></div>
-    </form>
+        <div id="status" class="status"></div>
+      </form>
+    </div>
 
-    <div id="result" class="result">
-      <img id="outGif" class="gif" alt="Animated portrait" />
-      <a id="dlBtn" class="dl-btn" href="#" download>Download GIF</a>
+    <div class="col-result">
+      <div class="result-panel">
+        <div id="loader" class="cozy-loader">
+          <div class="wisps">
+            <div class="wisp"></div>
+            <div class="wisp"></div>
+            <div class="wisp"></div>
+            <div class="wisp"></div>
+            <div class="wisp"></div>
+          </div>
+          <div id="cozy-msg" class="cozy-msg">Warming up the canvas…</div>
+          <div class="cozy-sub">Memories don't rush — this takes about a minute.</div>
+        </div>
+
+        <div id="empty" class="result-empty">
+          <div class="empty-icon">&#x2728;</div>
+          <div>Your looping portrait will appear here.</div>
+        </div>
+
+        <div id="result" class="result">
+          <div class="phones">
+            <div class="phone-wrap">
+              <div class="phone iphone"><div class="screen"><img id="iphoneGif" alt="" /></div></div>
+              <div class="phone-label">iPhone</div>
+            </div>
+            <div class="phone-wrap">
+              <div class="phone samsung"><div class="screen"><img id="samsungGif" alt="" /></div></div>
+              <div class="phone-label">Galaxy</div>
+            </div>
+          </div>
+          <div style="margin-top: 18px;"><a id="dlBtn" class="dl-btn" href="#" download>Download GIF</a></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -199,9 +504,30 @@
   const form = document.getElementById('form');
   const goBtn = document.getElementById('go');
   const status = document.getElementById('status');
+  const loader = document.getElementById('loader');
+  const cozyMsg = document.getElementById('cozy-msg');
   const result = document.getElementById('result');
-  const outGif = document.getElementById('outGif');
+  const iphoneGif = document.getElementById('iphoneGif');
+  const samsungGif = document.getElementById('samsungGif');
   const dlBtn = document.getElementById('dlBtn');
+
+  const cozyMessages = [
+    "Warming up the canvas…",
+    "Dusting off a favorite memory…",
+    "Pulling out the old photo album…",
+    "Listening for a familiar laugh…",
+    "Letting the light through the kitchen window…",
+    "Warming the teapot, two cups out…",
+    "Turning back the clock, just a little…",
+    "Saving a seat at the table…",
+    "Remembering the way they smiled…",
+    "Bottling a bit of afternoon sunlight…",
+    "Threading the needle with care…",
+    "Brewing a fresh pot of pixels…",
+    "Polishing the frame on the mantle…",
+    "Almost there — adding the finishing glow…",
+  ];
+  let cozyTimer = null;
 
   drop.addEventListener('click', () => fileInput.click());
   drop.addEventListener('keydown', (e) => {
@@ -233,10 +559,32 @@
     reader.readAsDataURL(file);
   }
 
+  const emptyState = document.getElementById('empty');
+
+  function startCozyLoader() {
+    loader.classList.add('show');
+    emptyState.style.display = 'none';
+    let idx = 0;
+    cozyMsg.textContent = cozyMessages[0];
+    cozyTimer = setInterval(() => {
+      idx = (idx + 1) % cozyMessages.length;
+      cozyMsg.style.opacity = '0';
+      setTimeout(() => {
+        cozyMsg.textContent = cozyMessages[idx];
+        cozyMsg.style.opacity = '1';
+      }, 400);
+    }, 4000);
+  }
+
+  function stopCozyLoader() {
+    loader.classList.remove('show');
+    if (cozyTimer) { clearInterval(cozyTimer); cozyTimer = null; }
+  }
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!fileInput.files[0]) {
-      setStatus('Please choose a portrait image first.', true);
+      setStatus('Please choose a portrait image first.', 'error');
       return;
     }
     const fd = new FormData();
@@ -245,31 +593,36 @@
 
     goBtn.disabled = true;
     result.classList.remove('show');
-    setStatus('<span class="spinner"></span>Generating animation (this may take 30–90 seconds)…');
+    setStatus('');
+    startCozyLoader();
 
     try {
       const res = await fetch('/generate', { method: 'POST', body: fd });
       const data = await res.json();
+      stopCozyLoader();
       if (!res.ok) {
-        setStatus(data.error || 'Generation failed.', true);
+        setStatus(data.error || 'Generation failed.', 'error');
         return;
       }
-      outGif.src = data.gif_url + '?t=' + Date.now();
+      const src = data.gif_url + '?t=' + Date.now();
+      iphoneGif.src = src;
+      samsungGif.src = src;
       dlBtn.href = data.download_url;
       result.classList.add('show');
       const size = data.info && data.info.bytes
-        ? ' (' + (data.info.bytes / (1024*1024)).toFixed(1) + ' MB)'
+        ? ' · ' + (data.info.bytes / (1024*1024)).toFixed(1) + ' MB'
         : '';
-      setStatus('Done' + size + '.');
+      setStatus('Done' + size, 'success');
     } catch (err) {
-      setStatus('Network error: ' + err.message, true);
+      stopCozyLoader();
+      setStatus('Network error: ' + err.message, 'error');
     } finally {
       goBtn.disabled = false;
     }
   });
 
-  function setStatus(msg, isError) {
-    status.className = 'status' + (isError ? ' error' : '');
+  function setStatus(msg, kind) {
+    status.className = 'status' + (kind ? ' ' + kind : '');
     status.innerHTML = msg;
   }
 </script>

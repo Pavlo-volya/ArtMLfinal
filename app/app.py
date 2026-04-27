@@ -22,9 +22,19 @@ from flask import (
 from PIL import Image
 from werkzeug.utils import secure_filename
 
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent / ".env")
+
 import expressions
 import gif_writer
-import liveportrait_runner
+
+USE_REPLICATE = os.environ.get("USE_REPLICATE", "0") == "1"
+
+if USE_REPLICATE:
+    import replicate_runner as runner
+else:
+    import liveportrait_runner as runner
 
 
 def _lan_ip() -> str:
@@ -45,11 +55,27 @@ def _lan_ip() -> str:
 APP_DIR = Path(__file__).resolve().parent
 UPLOAD_DIR = APP_DIR / "static" / "uploads"
 OUTPUT_DIR = APP_DIR / "static" / "outputs"
+GALLERY_DIR = APP_DIR / "static" / "gallery"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # 20 MB
+
+
+def _gallery_items() -> list[dict]:
+    """Return the fixed set of selectable portraits, sorted by filename."""
+    if not GALLERY_DIR.exists():
+        return []
+    items = []
+    for path in sorted(GALLERY_DIR.iterdir()):
+        if path.suffix.lower() in ALLOWED_EXTS and not path.name.startswith("."):
+            items.append({
+                "id": path.stem,
+                "url": url_for("static", filename=f"gallery/{path.name}"),
+                "filename": path.name,
+            })
+    return items
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
@@ -90,16 +116,21 @@ def generate():
     src_path = UPLOAD_DIR / f"{file_id}{ext}"
     file.save(src_path)
 
-    frame_params = expressions.get_frames(preset)
-
     try:
-        frames = liveportrait_runner.animate(str(src_path), frame_params)
+        if USE_REPLICATE:
+            frames = runner.animate(str(src_path), preset)
+        else:
+            frame_params = expressions.get_frames(preset)
+            frames = runner.animate(str(src_path), frame_params)
     except Exception as e:
         app.logger.exception("Animation failed")
         return jsonify({"error": f"Animation failed: {e}"}), 500
 
+    import time
     out_path = OUTPUT_DIR / f"{file_id}.gif"
+    t0 = time.perf_counter()
     info = gif_writer.write_gif(frames, str(out_path))
+    print(f"[gif_writer] took {time.perf_counter() - t0:.1f}s -> {info}")
 
     download_url = url_for("download", file_id=file_id)
     gif_url = url_for("static", filename=f"outputs/{file_id}.gif")
@@ -144,7 +175,8 @@ def qr(file_id: str):
 def health():
     return jsonify({
         "status": "ok",
-        "cuda": liveportrait_runner.using_cuda(),
+        "cuda": runner.using_cuda(),
+        "backend": "replicate" if USE_REPLICATE else "local",
     })
 
 
@@ -152,6 +184,15 @@ if __name__ == "__main__":
     # Default to 5001 — macOS binds 5000 to AirPlay Receiver.
     port = int(os.environ.get("PORT", "5001"))
     lan = _lan_ip()
+
+    # Upload driving videos to Replicate once so /generate requests don't
+    # pay the 8MB upload tax. Cached URLs persist in app/.driving_video_urls.json.
+    if USE_REPLICATE:
+        try:
+            runner.prewarm_uploads()
+        except Exception as e:
+            print(f"[warn] prewarm failed (first /generate will be slower): {e}")
+
     print(f"\n  Local:   http://localhost:{port}")
     print(f"  Network: http://{lan}:{port}   <- QR / phone URL\n")
     # Single-process for model reuse; threaded for concurrent downloads/QR.
